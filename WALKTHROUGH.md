@@ -527,27 +527,35 @@ Each of these is a great talking point for the interview — they show real debu
 
 ## Submission email template
 
+**To:** Cedie Garcia
+**CC:** Russell, Enrick, Jay (same people on the original email)
+**Subject:** Take-home Exam Submission — URL Shortener
+
 ```
-Subject: Take-home Exam Submission — URL Shortener
+Hi Cedie,
 
-Hi [Hiring Team],
+Thanks again for the opportunity. Submitting my take-home exam below.
 
-Submitting my take-home exam.
+  • Public URL:   http://136.115.214.42/
+  • Admin URL:    http://136.115.214.42/admin
+  • Admin user:   admin
+  • Admin pass:   <paste the password from your VM .env>
+  • Repository:   https://github.com/than0s88/url-shortener
 
-  • Public URL: http://136.115.214.42/
-  • Admin URL:  http://136.115.214.42/admin
-  • Username:   admin
-  • Password:   <paste actual password>
-  • Repository: https://github.com/than0s88/url-shortener
+The repo includes the four required documents:
+  - README.md       — project overview
+  - DEPLOYMENT.md   — step-by-step VM deployment recipe
+  - DECISIONS.md    — three technical decisions with alternatives considered
+  - AI_USAGE.md     — AI tools used and examples of where the AI was wrong
 
-The repo includes README.md, DEPLOYMENT.md, DECISIONS.md, and AI_USAGE.md.
+Stack: Next.js 16 (App Router) + better-sqlite3 + Docker Compose + Nginx,
+running on Ubuntu 24.04. Process management via Docker's own systemd unit;
+SQLite persisted in a Docker named volume. Reboot-tested — site recovers
+within 60 seconds of `sudo reboot`.
 
-Stack: Next.js 16 (App Router) + better-sqlite3 + Docker Compose + Nginx
-       on Ubuntu 24.04. systemd handles boot-time process supervision via
-       Docker's own service. Reboot-tested — site recovers in <60s.
+I also kept a chronological build log in WALKTHROUGH.md if it's helpful.
+Happy to walk through any of the code or technical decisions on a call.
 
-Happy to walk through the code or any of the technical decisions.
-
-Thanks,
+Best regards,
 Paulo
 ```

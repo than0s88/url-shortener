@@ -1,0 +1,39 @@
+# Build artifacts and deps
+node_modules
+.next
+.pnpm-store
+
+# Local data and logs
+data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+
+# Secrets — never bake these into an image
+.env
+.env.*
+!.env.example
+
+# Git, IDE, OS
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+
+# Documentation (lives in the repo, not the image)
+README.md
+DEPLOYMENT.md
+DECISIONS.md
+AI_USAGE.md
+Technical_Exam.pdf
+
+# Docker meta (not needed inside the image)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+*.tsbuildinfo

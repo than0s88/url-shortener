@@ -24,23 +24,26 @@ Three specific choices made for this project. For each: what we considered, what
 
 ---
 
-## 2. Process manager: systemd vs PM2 vs Docker
+## 2. Process manager: Docker vs systemd vs PM2
 
 **Considered:**
-- **systemd** — native to every modern Linux, no extra deps, OS-level supervision
-- **PM2** — Node-specific, friendly CLI, ecosystem-familiar, can save process list
-- **Docker** — full container, isolated runtime, also handles restart policy
+- **Docker (Compose)** — containerized, image-based deploy, declarative restart policy
+- **systemd** — native to every modern Linux, no extra runtime, OS-level supervision
+- **PM2** — Node-specific, friendly CLI, ecosystem-familiar
 
-**Picked:** systemd.
+**Picked:** Docker (with Docker Compose).
 
 **Why:**
-- **Reboot resilience is the spec's hard requirement.** systemd is what brings the box back on boot anyway — using it directly removes a layer (PM2's `pm2 startup` registers a systemd unit under the hood). Fewer moving parts = fewer failure modes.
-- **No extra runtime to install or keep updated.** The app's only external dependencies are nginx and Node. PM2 would mean another global package to keep current and patch.
-- **Native log integration.** `journalctl -u url-shortener` gives us structured logs with timestamps and persistence across reboots without setting anything up. PM2 logs to its own files in `~/.pm2/logs/` — fine, but extra to learn.
-- **Hardening hooks built in.** Setting `NoNewPrivileges`, `ProtectSystem`, `ProtectHome`, and `ReadWritePaths` in the unit file gives us defense-in-depth that PM2 can't add.
-- **Trade-off:** I have to write an `EnvironmentFile` and a unit file by hand instead of `pm2 start npm --name x`. That's ~20 lines of config for the lifetime gain — a fair trade.
+- **Reproducible artifact.** The image built locally is byte-identical to the one running on the VM. There's no "works on my machine" gap — `docker compose up -d --build` produces the same runtime regardless of the host's Node version, glibc version, or pnpm version.
+- **Self-contained runtime.** The host only needs Docker + Nginx. We don't have to install Node 22, configure pnpm, or worry about future Node version drift on the host. The base image (`node:22-bookworm-slim`) pins the runtime explicitly.
+- **Easy rollback.** `docker compose down && docker tag url-shortener:previous url-shortener:latest && docker compose up -d` brings back the prior image. With systemd we'd have to `git checkout <sha> && pnpm build && systemctl restart`, which is a multi-step process that can fail mid-way.
+- **Reboot resilience is automatic.** `restart: unless-stopped` plus the Docker daemon's own systemd unit (`docker.service`, enabled by default) means the container comes back on boot without any extra config. No need to write a custom unit file.
+- **Multi-stage Dockerfile keeps the image small.** Build deps (python, gcc) live only in the deps/builder stages; the final runtime image is `node:22-bookworm-slim` + Next.js standalone bundle (~180 MB). Native `better-sqlite3` is compiled in the deps stage and only its `.node` binding is copied to the final image.
+- **Trade-off:** Docker engine is an extra runtime to install (~250 MB) and another moving piece to learn. For a one-app VM, systemd is genuinely simpler — we accepted that cost in exchange for the reproducibility and rollback benefits.
 
-**Rejected Docker** because the spec explicitly considers PM2/systemd/Docker equivalent options, and Docker would add image-build complexity, a container runtime, and a separate networking story for a single Node process talking to one SQLite file on a host volume. Overkill at this scale.
+**Rejected systemd** because while it's simpler in raw line count, it couples the deployment to the host's Node/pnpm versions. Any host upgrade risks breaking the build, and rolling back means re-running a full `pnpm install` + `pnpm build`. Docker isolates that.
+
+**Rejected PM2** because it adds a process supervisor *on top of* whatever runtime is on the host, but doesn't solve the host-coupling problem. It's the worst of both worlds for our use case — extra dependency without extra isolation.
 
 ---
 

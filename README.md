@@ -18,8 +18,8 @@ A small URL shortener built for a take-home deployment exam. Built with **Next.j
 | Database | SQLite via `better-sqlite3` | Single-file, synchronous, fast |
 | Styling | Tailwind CSS v4 | Minimal config, modern |
 | Auth (admin) | HTTP Basic Auth via Next.js Proxy | One admin user — simplest correct option |
-| Process manager (prod) | systemd | Native, reboot-resilient, no extra deps |
-| Reverse proxy (prod) | Nginx | Stable, universal, well-documented |
+| Process manager (prod) | Docker Compose | Reproducible image, declarative restart policy |
+| Reverse proxy (prod) | Nginx (host) | Stable, universal, well-documented |
 
 See [DECISIONS.md](./DECISIONS.md) for the rationale on the major choices.
 

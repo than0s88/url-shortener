@@ -1,0 +1,30 @@
+# Production compose file for the URL Shortener.
+# Run: docker compose up -d --build
+#
+# Reads from a `.env` file in the same directory for both:
+#   - build-time substitution (NEXT_PUBLIC_BASE_URL)
+#   - runtime env vars passed into the container
+#
+# The .env file is gitignored — never commit it.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Inlined into the client bundle at build time.
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+    image: url-shortener:latest
+    container_name: url-shortener
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Bind only to localhost — Nginx on the host is the public entry point.
+    # External traffic must come through port 80 → Nginx → 127.0.0.1:3000.
+    ports:
+      - "127.0.0.1:3000:3000"
+    # Persistent SQLite directory on the host. Survives container rebuilds
+    # and host reboots. UID 1001 matches the in-container `nextjs` user.
+    volumes:
+      - /var/lib/url-shortener:/var/lib/url-shortener

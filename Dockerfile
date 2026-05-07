@@ -53,6 +53,11 @@ RUN groupadd --system --gid 1001 nodejs \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Pre-create the SQLite data dir with nextjs ownership. When Docker creates
+# a fresh named volume mounted here, it inherits these permissions — which
+# means the container can write the .db file without a chown init script.
+RUN mkdir -p /var/lib/url-shortener && chown nextjs:nodejs /var/lib/url-shortener
+
 USER nextjs
 EXPOSE 3000
 

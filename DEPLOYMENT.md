@@ -11,7 +11,7 @@ internet  ──►  Nginx :80  ──►  Docker container :3000  ──►  /v
 
 - **Process manager:** Docker Compose (`restart: unless-stopped`) — auto-restart on crash, auto-start on boot via the Docker daemon's own systemd unit.
 - **Reverse proxy:** Nginx on the host — terminates port 80, forwards to `127.0.0.1:3000`.
-- **Persistent storage:** SQLite file at `/var/lib/url-shortener/urls.db` (host volume bind-mounted into the container).
+- **Persistent storage:** SQLite file in a Docker named volume `url-shortener-data` (mounted at `/var/lib/url-shortener` inside the container). Stored under `/var/lib/docker/volumes/` on the host — persistent across container removes and host reboots.
 - **Secrets:** all in `/opt/url-shortener/app/.env`, mode `0600`. Compose reads it at `docker compose up`.
 
 ---
@@ -68,18 +68,7 @@ git clone https://github.com/than0s88/url-shortener.git /opt/url-shortener/app
 cd /opt/url-shortener/app
 ```
 
-### 4. Create the persistent SQLite directory
-
-The DB file lives outside `/tmp` and survives container rebuilds + reboots.
-UID/GID `1001` matches the `nextjs` user inside the container.
-
-```bash
-sudo mkdir -p /var/lib/url-shortener
-sudo chown 1001:1001 /var/lib/url-shortener
-sudo chmod 0750 /var/lib/url-shortener
-```
-
-### 5. Create the `.env` file (secrets)
+### 4. Create the `.env` file (secrets)
 
 Generate a strong random admin password:
 
@@ -108,7 +97,6 @@ NODE_ENV=production
 PORT=3000
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=<paste the strong password>
-DATABASE_PATH=/var/lib/url-shortener/urls.db
 NEXT_PUBLIC_BASE_URL=http://<paste the VM public IP>
 ```
 
@@ -118,9 +106,9 @@ Save (`Ctrl+O`, `Enter`, `Ctrl+X`). Lock down the file so only you can read it:
 chmod 600 /opt/url-shortener/app/.env
 ```
 
-The `.env` file is in `.gitignore` — it will never be committed.
+The `.env` file is in `.gitignore` — it will never be committed. (Note: `DATABASE_PATH` isn't in `.env` — the docker-compose file sets it directly to point at the mounted volume.)
 
-### 6. Build and start the container
+### 5. Build and start the container
 
 ```bash
 cd /opt/url-shortener/app
@@ -138,7 +126,7 @@ docker compose logs -f --tail=50    # Ctrl+C to exit
 
 You should see `url-shortener` with status `Up` and a log line like `✓ Ready in NNNms`.
 
-### 7. Configure Nginx as the reverse proxy
+### 6. Configure Nginx as the reverse proxy
 
 ```bash
 sudo nano /etc/nginx/sites-available/url-shortener
@@ -177,7 +165,7 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### 8. Open the firewall
+### 7. Open the firewall
 
 ```bash
 sudo ufw allow OpenSSH
@@ -247,6 +235,13 @@ docker compose exec app node -e \
 ## Backup
 
 ```bash
-sudo apt -y install sqlite3
-sudo sqlite3 /var/lib/url-shortener/urls.db ".backup '/tmp/urls-$(date +%F).db'"
+docker compose exec app sh -c "apt-get update && apt-get -y install sqlite3" 2>/dev/null
+docker compose exec app sqlite3 /var/lib/url-shortener/urls.db \
+  ".backup '/var/lib/url-shortener/urls-$(date +%F).db'"
+```
+
+Or copy the volume contents directly from the host:
+
+```bash
+sudo cp /var/lib/docker/volumes/app_url-shortener-data/_data/urls.db /tmp/urls-backup.db
 ```

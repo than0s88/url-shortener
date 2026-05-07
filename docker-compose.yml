@@ -1,11 +1,15 @@
 # Production compose file for the URL Shortener.
-# Run: docker compose up -d --build
+# Single command for both local Windows testing AND the production VM:
+#
+#     docker compose up -d --build
 #
 # Reads from a `.env` file in the same directory for both:
 #   - build-time substitution (NEXT_PUBLIC_BASE_URL)
-#   - runtime env vars passed into the container
+#   - runtime env vars passed into the container (env_file)
 #
-# The .env file is gitignored — never commit it.
+# DATABASE_PATH is set explicitly in the `environment` block here (not .env)
+# so the in-container path always points at the mounted volume — independent
+# of whatever .env says (which may use a relative path for local pnpm dev).
 
 services:
   app:
@@ -20,11 +24,19 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    # Bind only to localhost — Nginx on the host is the public entry point.
-    # External traffic must come through port 80 → Nginx → 127.0.0.1:3000.
+    environment:
+      # In-container path — overrides whatever DATABASE_PATH is in .env.
+      DATABASE_PATH: /var/lib/url-shortener/urls.db
+    # Bind only to localhost. Nginx on the host (or in front of Docker) is
+    # the public entry point on port 80; external traffic must go through it.
     ports:
       - "127.0.0.1:3000:3000"
-    # Persistent SQLite directory on the host. Survives container rebuilds
-    # and host reboots. UID 1001 matches the in-container `nextjs` user.
+    # Named docker volume — works on Windows, macOS, and Linux without any
+    # host directory setup. Stored under /var/lib/docker/volumes/ on Linux,
+    # inside the WSL2 VM on Windows. Persistent across container removes
+    # and host reboots.
     volumes:
-      - /var/lib/url-shortener:/var/lib/url-shortener
+      - url-shortener-data:/var/lib/url-shortener
+
+volumes:
+  url-shortener-data:
